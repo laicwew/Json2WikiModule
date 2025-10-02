@@ -215,7 +215,10 @@ function generateTemplate(data) {
         else return blocks.join("<br>\n");
     }
 
-    let priorLines = buildSettlement(priors, true)+"<br>";
+    let priorLines = buildSettlement(priors, true);
+    if (priorLines) {
+        priorLines += "<br>";
+    }
     let settlementLines = buildSettlement(settlements, false);
     let settlementExtreLines = buildSettlement(settlementExtre, false);
 
