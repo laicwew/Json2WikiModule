@@ -206,7 +206,7 @@ function generateTemplate(data) {
                 if(Array.isArray(v)) return `${k}:${v.join(",")}`;
                 return `${k}:${v}`;
             }).join(", ");
-            let title = p.result_title ? `<big><b>${p.result_title}</b></big><br>` : "";
+            let title = p.result_title ? `<big><b>•${p.result_title}</b></big><br>` : "";
             let text = (p.result_text||"").replace(/\n/g,"<br>");
             let actionStr = (p.action && Object.keys(p.action).length > 0) ? formatAction(p.action) : "";
             return `<!-- [条件] ${conds}--> <!-- [结果] ${results} --> ${actionStr} {{折叠剧情|{{引用块|${title}${text} }} }}`;
