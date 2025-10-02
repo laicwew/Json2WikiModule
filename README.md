@@ -1,0 +1,2 @@
+# Json2WikiModule
+将苏丹的游戏仪式json转化为Wiki的仪式模板
