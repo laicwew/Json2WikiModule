@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON → 仪式模板生成器</title>
+<style>
+  body {
+    font-family: sans-serif;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 100%;
+    margin: 0;
+  }
+  textarea {
+    width: 95%;
+    max-width: 800px;
+    height: 250px;
+    margin: 10px 0;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 14px;
+    box-sizing: border-box;
+    resize: vertical;
+  }
+  pre {
+    width: 95%;
+    max-width: 800px;
+    padding: 10px;
+    background: #f5f5f5;
+    border: 1px solid #ccc;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin-top: 10px;
+  }
+  .button-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    width: 95%;
+    max-width: 800px;
+  }
+  button {
+    padding: 8px 20px;
+    font-size: 14px;
+    margin-right: 10px;
+    cursor: pointer;
+  }
+  @media (max-width: 600px) {
+    textarea, pre {
+      height: 200px;
+      font-size: 13px;
+    }
+    button {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+  }
+  #copyTip {
+    font-size: 14px;
+    color: green;
+  }
+</style>
+</head>
+<body>
+
+<h2>JSON → 仪式模板生成器</h2>
+<textarea id="jsonInput" placeholder="在这里粘贴包含注释的 JSON"></textarea>
+
+<div class="button-group">
+  <button onclick="processJSON()">生成模板</button>
+  <button onclick="copyOutput()">复制结果</button>
+  <span id="copyTip"></span>
+</div>
+
+<pre id="output"></pre>
+
+<script>
+function copyOutput() {
+    const output = document.getElementById('output');
+    if(!output.textContent.trim()) return;
+    navigator.clipboard.writeText(output.textContent).then(() => {
+        const tip = document.getElementById('copyTip');
+        tip.textContent = '已复制到剪贴板！';
+        setTimeout(()=>{ tip.textContent = ''; }, 2000);
+    }, (err) => {
+        alert('复制失败：' + err);
+    });
+}
+
+function processJSON() {
+    let raw = document.getElementById('jsonInput').value;
+
+    // 去掉 // 注释
+    let noComments = raw.replace(/\/\/.*$/gm, '');
+    // 去掉多余逗号
+    let noTrailingCommas = noComments.replace(/,(\s*[\]}])/g, '$1');
+
+    let obj;
+    try {
+        obj = JSON.parse(noTrailingCommas);
+    } catch(e) {
+        document.getElementById('output').textContent = 'JSON 解析错误：\n' + e;
+        return;
+    }
+
+    let template = generateTemplate(obj);
+    document.getElementById('output').textContent = template;
+}
+
+function generateTemplate(data) {
+    const tips = data.tips_text || [];
+    const slots = data.cards_slot || {};
+    let groupMap = { "吸入": [], "需要": [], "可选": [] };
+
+    for (let key in slots) {
+        const s = slots[key];
+        let type = "";
+        if (s.open_adsorb === 1) type = "吸入";
+        else if (s.open_adsorb === 0 && s.is_empty === 0) type = "需要";
+        else if (s.open_adsorb === 0 && s.is_empty === 1) type = "可选";
+
+        if (type) groupMap[type].push({ index: key.slice(1), text: s.text });
+    }
+
+    function buildLines(type) {
+        let arr = groupMap[type];
+        if (!arr.length) return "";
+        arr.sort((a,b)=>a.index-b.index);
+        let lines = [];
+        let i=0;
+        while(i<arr.length){
+            let start = i;
+            let end = i;
+            while(end+1<arr.length && arr[end+1].text === arr[start].text && arr[end+1].index == parseInt(arr[end].index)+1){
+                end++;
+            }
+            let idx = (start===end)? arr[start].index : arr[start].index+"-"+arr[end].index;
+            lines.push(`|${type}${idx}=`);
+            lines.push(`|描述${idx}=${arr[start].text}`);
+            if(type!=="吸入") lines.push(`|气泡${idx}=`);
+            i = end+1;
+        }
+        return lines.join("\n");
+    }
+
+    let slotTemplate = buildLines("吸入") + "\n" + buildLines("需要") + "\n" + buildLines("可选");
+
+    // 提示处理逻辑
+    let tipLines = "";
+    if(tips.length === 1){
+        tipLines = `|提示=${tips[0]}`;
+    } else if(tips.length > 1){
+        for(let i=0;i<3;i++){
+            tipLines += `|提示${i+1}=${tips[i]||""}\n`;
+        }
+        tipLines = tipLines.trim();
+    }
+
+    let tpl = `{{仪式新
+|前置弹窗=
+|标题=${data.name || ""}
+|剧情={{#lst:仪式|${data.id || ""}}}
+|id=${data.id || ""}
+|前置=
+|时限=${data.waiting_round || ""}
+|耗时=${data.round_number || ""}
+|超时=
+|超时剧情=
+${data.auto_begin===1? "|自动启动=1":""}
+${tipLines}
+|槽位信息={{复杂仪式槽位信息模板
+${slotTemplate}
+}}
+|详见=
+|检定=
+|骰子文本=
+|前判=
+|结算=
+|备注=
+|附录=
+}}`;
+    return tpl;
+}
+</script>
+
+</body>
+</html>
