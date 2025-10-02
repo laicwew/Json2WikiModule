@@ -69,7 +69,22 @@
 <body>
 
 <h2>JSON → 仪式模板生成器</h2>
-<textarea id="jsonInput" placeholder="在这里粘贴包含注释的 JSON"></textarea>
+<fieldset style="
+    border: 1px solid #ccc; 
+    padding: 10px; 
+    font-size: 12px; 
+    color: #555;
+    width: 95%;
+    max-width: 800px;
+    box-sizing: border-box;
+">
+    <legend>使用说明</legend>
+    * 自动填写标题，剧情，id，时限，耗时，提示，槽位描述，合并相同槽位<br>
+    * waiting_round=0：不生成超时和超时剧情<br>
+    * auto_begin=0：不生成自动启动
+</fieldset>
+
+<textarea id="jsonInput" placeholder="在这里粘贴JSON"></textarea>
 
 <div class="button-group">
   <button onclick="processJSON()">生成模板</button>
