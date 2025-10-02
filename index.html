@@ -130,6 +130,10 @@ function processJSON() {
 function generateTemplate(data) {
     const tips = data.tips_text || [];
     const slots = data.cards_slot || {};
+    const priors = data.settlement_prior || [];
+    const settlements = data.settlement || [];
+    const settlementExtre = data.settlement_extre || [];
+
     let groupMap = { "吸入": [], "需要": [], "可选": [] };
 
     for (let key in slots) {
@@ -170,11 +174,59 @@ function generateTemplate(data) {
     if(tips.length === 1){
         tipLines = `|提示=${tips[0]}`;
     } else if(tips.length > 1){
-        for(let i=0;i<3;i++){
+        for(let i=0;i<tips.length;i++){
             tipLines += `|提示${i+1}=${tips[i]||""}\n`;
         }
         tipLines = tipLines.trim();
     }
+
+    // 把 action 展平成一行
+    function formatAction(action){
+        if(!action) return "";
+        let parts = [];
+        for (let k in action){
+            let v = action[k];
+            if(typeof v === "object" && v!==null && !Array.isArray(v)){
+                let inner = Object.entries(v).map(([ik,iv])=>`${ik}:${iv}`).join(", ");
+                parts.push(`${k}{${inner}}`);
+            } else {
+                parts.push(`${k}:${v}`);
+            }
+        }
+        return `<!--action: {${parts.join(", ")}} -->`;
+    }
+
+    // settlement_prior 映射到前置
+    function buildSettlement(settlement, isPrior){
+        if(!settlement.length) return "";
+        let blocks = settlement.map(p=>{
+            let conds = Object.entries(p.condition||{}).map(([k,v])=>`${k}:${v}`).join("；");
+            let results = Object.entries(p.result||{}).map(([k,v])=>{
+                if(Array.isArray(v)) return `${k}:${v.join(",")}`;
+                return `${k}:${v}`;
+            }).join(", ");
+            let title = p.result_title ? `<big><b>${p.result_title}</b></big><br>` : "";
+            let text = (p.result_text||"").replace(/\n/g,"<br>");
+            let actionStr = (p.action && Object.keys(p.action).length > 0) ? formatAction(p.action) : "";
+            return `<!-- [条件] ${conds}--> <!-- [结果] ${results} --> ${actionStr} {{折叠剧情|{{引用块|${title}${text} }} }}`;
+        });
+        if(isPrior) return blocks.join("<br>");
+        else return blocks.join("<br>\n");
+    }
+
+    let priorLines = buildSettlement(priors, true)+"<br>";
+    let settlementLines = buildSettlement(settlements, false);
+    let settlementExtreLines = buildSettlement(settlementExtre, false);
+
+    let allSettlementLines = settlementLines;
+    if(settlementExtreLines) { // 连接时判断 settlementExtreLines 是否为空
+        allSettlementLines += `<br><!--额外结算--><br>` + buildSettlement(settlementExtre)
+    }
+
+    let timeoutLines = "";
+    if (data.waiting_round != null && data.waiting_round !== 0) {
+    timeoutLines = `|超时=\n|超时剧情=`;
+}
 
     let tpl = `{{仪式新
 |前置弹窗=
@@ -182,10 +234,9 @@ function generateTemplate(data) {
 |剧情={{#lst:仪式|${data.id || ""}}}
 |id=${data.id || ""}
 |前置=
-|时限=${data.waiting_round || ""}
-|耗时=${data.round_number || ""}
-|超时=
-|超时剧情=
+|时限=${data.waiting_round != null ? data.waiting_round : ""}
+|耗时=${data.round_number != null ? data.round_number : ""}
+${timeoutLines}
 ${data.auto_begin===1? "|自动启动=1":""}
 ${tipLines}
 |槽位信息={{复杂仪式槽位信息模板
@@ -194,14 +245,15 @@ ${slotTemplate}
 |详见=
 |检定=
 |骰子文本=
-|前判=
-|结算=
+|前判=${priorLines}
+|结算=${allSettlementLines}
 |备注=
 |附录=
 }}`;
     return tpl;
 }
 </script>
+
 <!-- 页脚 -->
 <footer style="text-align:center; padding:10px; font-size:12px; color:#888; font-style:italic; margin-top:20px;">
     项目地址：<a href="https://github.com/laicwew/Json2WikiModule" target="_blank" style="color:#888;">https://github.com/laicwew/Json2WikiModule</a>
