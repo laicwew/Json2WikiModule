@@ -211,22 +211,23 @@ function generateTemplate(data) {
             let title = p.result_title ? `<big><b>•${p.result_title}</b></big><br>` : "";
             let text = (p.result_text||"").replace(/\n/g,"<br>");
             let actionStr = (p.action && Object.keys(p.action).length > 0) ? formatAction(p.action) : "";
-            return `<!-- [条件] ${conds}--> <!-- [结果] ${results} --> ${actionStr} {{折叠剧情|{{引用块|${title}${text} }} }}`;
+            if(isPrior) return `<!-- [条件] ${conds}--> <!-- [结果] ${results} --> ${actionStr} {{折叠剧情|{{引用块|${title}${text} }} }}`;
+            return `<!-- [条件] ${conds}--> <!-- [结果] ${results} --> ${actionStr} \n {{折叠剧情|{{引用块|${title}${text} }} }}`;
         });
-        if(isPrior) return blocks.join("<br>");
-        else return blocks.join("<br>\n");
+        if(isPrior) return blocks.join("");
+        else return blocks.join("\n");
     }
 
     let priorLines = buildSettlement(priors, true);
     if (priorLines) {
-        priorLines += "<br>";
+        priorLines += "";
     }
     let settlementLines = buildSettlement(settlements, false);
     let settlementExtreLines = buildSettlement(settlementExtre, false);
 
     let allSettlementLines = settlementLines;
     if(settlementExtreLines) { // 连接时判断 settlementExtreLines 是否为空
-        allSettlementLines += `<br><!--额外结算--><br>` + buildSettlement(settlementExtre)
+        allSettlementLines += `<!--额外结算-->` + buildSettlement(settlementExtre)
     }
 
     let timeoutLines = "";
@@ -252,7 +253,8 @@ ${slotTemplate}
 |检定=
 |骰子文本=
 |前判=${priorLines}
-|结算=${allSettlementLines}
+|结算=
+${allSettlementLines}
 |备注=
 |附录=
 }}`;
