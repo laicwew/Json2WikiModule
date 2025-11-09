@@ -211,8 +211,8 @@ function generateTemplate(data) {
             let title = p.result_title ? `<big><b>•${p.result_title}</b></big><br>` : "";
             let text = (p.result_text||"").replace(/\n/g,"<br>");
             let actionStr = (p.action && Object.keys(p.action).length > 0) ? formatAction(p.action) : "";
-            if(isPrior) return `<!-- [条件] ${conds}--> <!-- [结果] ${results} --> ${actionStr} {{折叠剧情|{{引用块|${title}${text} }} }}`;
-            return `<!-- [条件] ${conds}--> <!-- [结果] ${results} --> ${actionStr} \n {{折叠剧情|{{引用块|${title}${text} }} }}`;
+            if(isPrior) return `<!-- [条件] ${conds}--> <!-- [结果] ${results} --> ${actionStr}{{折叠剧情|{{引用块|${title}${text} }} }}`;
+            return `<!-- [条件] ${conds}--> <!-- [结果] ${results} --> ${actionStr}\n{{折叠剧情|{{引用块|${title}${text} }} }}`;
         });
         if(isPrior) return blocks.join("");
         else return blocks.join("\n");
